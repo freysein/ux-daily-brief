@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Local runtime data
+data/state/*
+!data/state/.gitkeep
+data/inbox/newsletters/*
+!data/inbox/newsletters/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Local databases
+*.duckdb
+*.duckdb.wal
+
+# macOS
+.DS_Store
