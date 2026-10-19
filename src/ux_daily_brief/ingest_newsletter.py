@@ -11,6 +11,8 @@ from pathlib import Path
 
 import yaml
 
+from ux_daily_brief.source_identifier import identify_source
+
 ROOT = Path(__file__).resolve().parents[2]
 INBOX = ROOT / "data" / "inbox" / "newsletters"
 CONFIG = ROOT / "config" / "sources.yml"
@@ -23,7 +25,7 @@ def allowed_sources() -> set[str]:
     return {
         key
         for key, value in config["sources"].items()
-        if value.get("access") == "newsletter"
+        if value.get("access") == "newsletter" or key == "page"
     } | {"ux_inbox"}
 
 
@@ -31,7 +33,9 @@ def ingest(payload: dict) -> dict:
     if not isinstance(payload, dict):
         raise ValueError("Payload must be a JSON object")
 
-    source = str(payload.get("source") or "ux_inbox").strip()
+    sender = str(payload.get("from") or "").strip()
+    identification = identify_source(sender)
+    source = identification["source"]
 
     if source not in allowed_sources():
         raise ValueError(f"Unsupported source: {source!r}")

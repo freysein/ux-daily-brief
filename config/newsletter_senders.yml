@@ -1,0 +1,18 @@
+version: 1
+
+senders:
+  wired:
+    addresses:
+      - wired@newsletters.wired.com
+
+  techcrunch:
+    addresses:
+      - newsletters@techcrunch.com
+
+  nngroup:
+    addresses:
+      - alertbox@nngroup.com
+
+  page:
+    addresses:
+      - page@cloud.ebnermedia.de

@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from ux_daily_brief import ingest_newsletter as module
@@ -27,6 +30,7 @@ def test_store_newsletter(inbox):
     result = module.ingest(payload())
 
     assert result["status"] == "stored"
+    assert result["source"] == "ux_inbox"
     assert len(list(inbox.glob("*.json"))) == 1
 
 
@@ -50,15 +54,49 @@ def test_missing_body(inbox):
         module.ingest(payload(body_text="", body_html=""))
 
 
-def test_unknown_source(inbox):
-    with pytest.raises(ValueError, match="Unsupported source"):
-        module.ingest(payload(source="unknown_source"))
-
-
-def test_known_newsletter_source(inbox):
+def test_unknown_sender(inbox):
     result = module.ingest(
-        payload(source="nngroup", message_id="nngroup-test-001")
+        payload(source="wired", **{"from": "unknown@example.org"})
+    )
+
+    assert result["source"] == "ux_inbox"
+    assert result["status"] == "stored"
+
+
+@pytest.mark.parametrize(
+    "sender,expected",
+    [
+        ("WIRED Daily <wired@newsletters.wired.com>", "wired"),
+        ("TechCrunch <newsletters@techcrunch.com>", "techcrunch"),
+        ("Nielsen Norman Group <alertbox@nngroup.com>", "nngroup"),
+        ("PAGE <page@cloud.ebnermedia.de>", "page"),
+    ],
+)
+def test_known_newsletter_sources(inbox, sender, expected):
+    result = module.ingest(
+        payload(
+            message_id=f"test-{expected}",
+            **{"from": sender},
+        )
     )
 
     assert result["status"] == "stored"
-    assert result["source"] == "nngroup"
+    assert result["source"] == expected
+
+    saved = json.loads(Path(result["path"]).read_text(encoding="utf-8"))
+    assert saved["source"] == expected
+    assert saved["from"] == sender
+
+
+def test_duplicate_cannot_overwrite_original(inbox):
+    original = payload(body_text="Original newsletter content")
+    first = module.ingest(original)
+
+    changed = payload(body_text="Modified newsletter content")
+    second = module.ingest(changed)
+
+    assert first["status"] == "stored"
+    assert second["status"] == "duplicate"
+
+    saved = json.loads(Path(first["path"]).read_text(encoding="utf-8"))
+    assert saved["body_text"] == "Original newsletter content"
