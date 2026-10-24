@@ -142,3 +142,138 @@ def test_old_url_not_blocked(tmp_path):
         db_path=db,
         now=NOW,
     )
+
+
+def test_recent_stories_include_titles(tmp_path):
+    from ux_daily_brief.publication_history import (
+        recently_published_stories,
+    )
+
+    db = tmp_path / "history.duckdb"
+
+    record_publication(
+        "article-123",
+        "techcrunch",
+        "AI Agents Started Playing",
+        "https://example.com/agents",
+        "2026-10-23",
+        db_path=db,
+        published_at=NOW - timedelta(days=1),
+    )
+
+    stories = recently_published_stories(
+        db_path=db,
+        now=NOW,
+    )
+
+    assert len(stories) == 1
+    assert stories[0]["article_id"] == "article-123"
+    assert stories[0]["source"] == "techcrunch"
+    assert stories[0]["title"] == "AI Agents Started Playing"
+
+
+def test_stories_older_than_14_days_excluded(tmp_path):
+    from ux_daily_brief.publication_history import (
+        recently_published_stories,
+    )
+
+    db = tmp_path / "history.duckdb"
+
+    record_publication(
+        "old-article",
+        "smashing",
+        "Old UX Article",
+        "https://example.com/old",
+        "2026-10-01",
+        db_path=db,
+        published_at=NOW - timedelta(days=20),
+    )
+
+    assert recently_published_stories(
+        db_path=db,
+        now=NOW,
+    ) == []
+
+
+def test_stories_in_future_excluded(tmp_path):
+    from ux_daily_brief.publication_history import (
+        recently_published_stories,
+    )
+
+    db = tmp_path / "history.duckdb"
+
+    record_publication(
+        "future-article",
+        "smashing",
+        "Future UX Article",
+        "https://example.com/future",
+        "2026-10-25",
+        db_path=db,
+        published_at=NOW + timedelta(days=1),
+    )
+
+    assert recently_published_stories(
+        db_path=db,
+        now=NOW,
+    ) == []
+
+
+def test_publication_excerpt_roundtrip(tmp_path):
+    from ux_daily_brief.publication_history import (
+        recently_published_stories,
+    )
+
+    db = tmp_path / "history.duckdb"
+
+    record_publication(
+        "article-excerpt",
+        "techcrunch",
+        "AI Agents Started Playing",
+        "https://example.com/agents",
+        "2026-10-23",
+        db_path=db,
+        published_at=NOW - timedelta(days=1),
+        excerpt="Researchers observed 13 AI agents on an island.",
+    )
+
+    stories = recently_published_stories(
+        db_path=db,
+        now=NOW,
+    )
+
+    assert len(stories) == 1
+    assert stories[0]["excerpt"] == (
+        "Researchers observed 13 AI agents on an island."
+    )
+
+
+def test_existing_database_migration(tmp_path):
+    import duckdb
+    from ux_daily_brief.publication_history import initialize_db
+
+    db = tmp_path / "legacy.duckdb"
+
+    with duckdb.connect(str(db)) as con:
+        con.execute("""
+            CREATE TABLE published_articles (
+                article_id VARCHAR NOT NULL,
+                source VARCHAR NOT NULL,
+                title VARCHAR NOT NULL,
+                url VARCHAR,
+                edition_date DATE NOT NULL,
+                published_at TIMESTAMPTZ NOT NULL,
+                PRIMARY KEY (article_id, edition_date)
+            )
+        """)
+
+    initialize_db(db)
+
+    with duckdb.connect(str(db), read_only=True) as con:
+        columns = {
+            row[1]
+            for row in con.execute(
+                "PRAGMA table_info('published_articles')"
+            ).fetchall()
+        }
+
+    assert "excerpt" in columns

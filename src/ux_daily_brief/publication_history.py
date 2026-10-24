@@ -24,6 +24,10 @@ def initialize_db(db_path: Path = DEFAULT_DB_PATH) -> None:
                 PRIMARY KEY (article_id, edition_date)
             )
         """)
+        con.execute("""
+            ALTER TABLE published_articles
+            ADD COLUMN IF NOT EXISTS excerpt VARCHAR
+        """)
 
 
 def record_publication(
@@ -34,6 +38,7 @@ def record_publication(
     edition_date: str,
     db_path: Path = DEFAULT_DB_PATH,
     published_at: datetime | None = None,
+    excerpt: str = "",
 ) -> None:
     initialize_db(db_path)
 
@@ -46,8 +51,8 @@ def record_publication(
         con.execute(
             """
             INSERT INTO published_articles
-            (article_id, source, title, url, edition_date, published_at)
-            VALUES (?, ?, ?, ?, CAST(? AS DATE), ?)
+            (article_id, source, title, url, edition_date, published_at, excerpt)
+            VALUES (?, ?, ?, ?, CAST(? AS DATE), ?, ?)
             ON CONFLICT (article_id, edition_date) DO NOTHING
             """,
             [
@@ -57,6 +62,7 @@ def record_publication(
                 url,
                 edition_date,
                 timestamp,
+                excerpt,
             ],
         )
 
@@ -152,3 +158,50 @@ def was_recently_published(
             days=days, db_path=db_path, now=now
         )
     )
+
+
+def recently_published_stories(
+    days: int = 14,
+    db_path: Path = DEFAULT_DB_PATH,
+    now: datetime | None = None,
+) -> list[dict]:
+    """Return stories published during the previous N days."""
+    from datetime import timedelta
+
+    if days <= 0:
+        raise ValueError("days must be positive")
+
+    initialize_db(db_path)
+
+    current = now or datetime.now(timezone.utc)
+
+    if current.tzinfo is None:
+        raise ValueError("now must be timezone-aware")
+
+    cutoff = current - timedelta(days=days)
+
+    with duckdb.connect(str(db_path), read_only=True) as con:
+        rows = con.execute(
+            """
+            SELECT article_id, source, title, url,
+                   edition_date, published_at, excerpt
+            FROM published_articles
+            WHERE published_at >= ?
+              AND published_at <= ?
+            ORDER BY published_at DESC
+            """,
+            [cutoff, current],
+        ).fetchall()
+
+    return [
+        {
+            "article_id": row[0],
+            "source": row[1],
+            "title": row[2],
+            "url": row[3],
+            "edition_date": str(row[4]),
+            "published_at": row[5],
+            "excerpt": row[6] or "",
+        }
+        for row in rows
+    ]
