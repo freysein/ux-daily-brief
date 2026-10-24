@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from ux_daily_brief.models import Article
@@ -10,6 +12,24 @@ from ux_daily_brief.extractors.techcrunch import (
 from ux_daily_brief.extractors.page import (
     extract_articles as extract_page,
 )
+
+
+def parse_received_at(value: str | None) -> datetime | None:
+    if not value:
+        return None
+
+    try:
+        result = parsedate_to_datetime(value)
+    except (ValueError, TypeError, IndexError):
+        try:
+            result = datetime.fromisoformat(value)
+        except (ValueError, TypeError):
+            return None
+
+    if result.tzinfo is None:
+        return None
+
+    return result.astimezone(timezone.utc)
 
 
 EXTRACTORS = {
@@ -28,6 +48,7 @@ def extract_from_newsletter(message: dict) -> list[Article]:
 
     html = message.get("body_html") or ""
     candidates = extractor(html)
+    received_at = parse_received_at(message.get("received_at"))
 
     return [
         Article(
@@ -36,6 +57,7 @@ def extract_from_newsletter(message: dict) -> list[Article]:
             url=item["url"],
             excerpt=item["excerpt"],
             origin="newsletter",
+            received_at=received_at,
         )
         for item in candidates
     ]

@@ -15,6 +15,7 @@ class Article:
     origin: str
 
     published_at: Optional[datetime] = None
+    received_at: Optional[datetime] = None
     review_status: str = "candidate"
     score: Optional[float] = None
     ux_impact: str = ""
@@ -45,6 +46,10 @@ class Article:
             "published_at": (
                 self.published_at.isoformat()
                 if self.published_at else None
+            ),
+            "received_at": (
+                self.received_at.isoformat()
+                if self.received_at else None
             ),
             "review_status": self.review_status,
             "score": self.score,
