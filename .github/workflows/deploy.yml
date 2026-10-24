@@ -1,0 +1,99 @@
+name: UX Daily Brief Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: "Full 40-character Git commit SHA"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ux-daily-brief-deployment
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify approved commit
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify SHA and CI result
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.commit_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: Full 40-character SHA required"
+            exit 1
+          fi
+
+          git cat-file -e "${TARGET_SHA}^{commit}"
+          git merge-base --is-ancestor "$TARGET_SHA" origin/main
+
+          COUNT="$(gh api -X GET \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+            -f head_sha="$TARGET_SHA" \
+            -f status=success \
+            -f event=push \
+            --jq '.total_count')"
+
+          if [[ "$COUNT" -lt 1 ]]; then
+            echo "ERROR: No successful push CI for this commit"
+            exit 1
+          fi
+
+          echo "sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "Commit and CI verified"
+
+  deploy:
+    name: Deploy on Mac Mini
+    needs: verify
+    runs-on:
+      - self-hosted
+      - macOS
+      - ARM64
+      - ux-daily-brief-deploy
+
+    steps:
+      - name: Deploy verified commit
+        env:
+          TARGET_SHA: ${{ needs.verify.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$HOME/services/ux-daily-brief/deploy.sh" "$TARGET_SHA"
+
+      - name: Verify active release
+        env:
+          TARGET_SHA: ${{ needs.verify.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE="$HOME/services/ux-daily-brief"
+          ACTUAL="$(git -C "$BASE/current" rev-parse HEAD)"
+
+          test "$ACTUAL" = "$TARGET_SHA"
+          test -L "$BASE/current/data"
+          test "$(
+            cd "$BASE/current/data" && pwd -P
+          )" = "$BASE/shared/data"
+
+          echo "DEPLOYMENT VERIFIED: $ACTUAL"
