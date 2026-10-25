@@ -26,33 +26,59 @@ SCHEMA = {
 
 def review_article(article: Article) -> dict:
     prompt = f"""
-You are the editorial quality reviewer for a professional
-UX newsletter.
+You are the editorial reviewer of a professional newsletter
+for UX, digital product design and AI professionals.
 
-Judge whether the article is genuinely useful for UX
-researchers, UX designers, interaction designers,
-accessibility specialists or UX strategists.
+AUDIENCE
+UX researchers, UX/UI designers, interaction designers,
+accessibility specialists, UX strategists, digital product
+designers and professionals integrating AI into products.
 
-Use ONLY the supplied title and description.
+Evaluate whether the article provides useful information,
+insights or developments for this audience.
 
-Classification:
-core_ux: Direct, concrete connection to UX practice.
-adjacent: Related discipline with a specific, evidenced
-connection to UX work.
-weak: Only speculative, generic or indirect UX relevance.
-review: Insufficient information to decide safely.
+Use ONLY the provided title and description.
 
-Rules:
-- Do not invent UX implications.
-- AI, design, technology and business topics are NOT
-  automatically UX-relevant.
-- Generic statements such as "could influence UX"
-  are insufficient evidence.
-- Evidence must identify information actually present
-  in the supplied article description.
-- If that evidence is absent, use weak or review.
+CLASSIFICATION
+
+core_ux:
+Direct relevance to UX research, UI design, interaction design,
+accessibility, usability, information architecture, service
+design, design systems, visual design or human-AI interaction.
+
+adjacent:
+Relevant developments in AI, agentic AI, digital products,
+product management, AI tools, automation, personalization,
+customer experience or digital strategy that professionals
+in the target audience should reasonably understand.
+
+weak:
+Only marginal, speculative or generic relevance to the
+target audience.
+
+review:
+Insufficient reliable information to classify the article.
+
+EDITORIAL PRINCIPLES
+
+- AI is a strategically important topic for UX professionals.
+- Include significant AI and agentic AI developments when their
+  relevance to digital products, workflows or human interaction
+  can be supported by the supplied information.
+- Visual design and digital brand experiences are relevant.
+- A specific practical UX application is NOT required for every
+  adjacent article.
+- Do not automatically classify every AI or technology article
+  as relevant.
+- Avoid inventing implications, facts or product capabilities.
+- A meaningful title can provide evidence, but do not infer
+  detailed findings from a headline alone.
+- If title and description do not support a confident decision,
+  choose review.
+- Only use evidence found in the supplied material.
 - Do not claim to have read the linked article.
-- Answer in English.
+- Keep the explanation concise and specific.
+- Respond in English.
 
 TITLE:
 {article.title}

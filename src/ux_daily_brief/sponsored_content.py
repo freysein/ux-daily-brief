@@ -35,6 +35,25 @@ def detect_sponsored_content(html: str) -> bool:
         )
 
         if text in SPONSORED_MARKERS:
+            # An embedded display ad is not article sponsorship.
+            # Preserve explicit sponsorship labels elsewhere.
+            if text == "anzeige":
+                ad_classes = {
+                    "c-ad-label",
+                    "c-ad-placeholder",
+                    "c-ad-container",
+                    "c-ad",
+                }
+                inside_display_ad = any(
+                    ad_classes.intersection(
+                        ancestor.get("class", [])
+                    )
+                    for ancestor in [element, *element.parents]
+                    if getattr(ancestor, "name", None)
+                )
+                if inside_display_ad:
+                    continue
+
             return True
 
     return False
