@@ -78,6 +78,11 @@ def main():
             received_at=(
                 original.received_at if original else None
             ),
+            review_status=(
+                original.review_status
+                if original is not None
+                else row.get("review_status", "candidate")
+            ),
         )
 
         if article.article_id != article_id:
