@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +28,7 @@ def build_daily_selection(
     max_per_source: int = 2,
     editorial_results: dict[str, dict] | None = None,
     min_articles: int = 6,
+    sponsorship_check: Callable[[Article], str] | None = None,
 ) -> DailySelectionResult:
     preliminary = select_articles(
         articles,
@@ -140,6 +142,28 @@ def build_daily_selection(
                 "reason": edition_decision.reason,
             })
             continue
+
+        if sponsorship_check is not None:
+            sponsorship = sponsorship_check(article)
+
+            if sponsorship == "sponsored":
+                result.excluded.append({
+                    "article_id": article.article_id,
+                    "reason": "sponsored_content",
+                })
+                continue
+
+            if sponsorship == "review":
+                result.review.append({
+                    "article_id": article.article_id,
+                    "reason": "sponsorship_unverified",
+                })
+                continue
+
+            if sponsorship != "not_sponsored":
+                raise ValueError(
+                    f"Invalid sponsorship result: {sponsorship}"
+                )
 
         result.selected.append(article)
         source_counts[article.source] = (

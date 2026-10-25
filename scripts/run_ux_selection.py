@@ -9,6 +9,7 @@ from pathlib import Path
 from ux_daily_brief.article_pipeline import extract_from_inbox
 from ux_daily_brief.daily_selection import build_daily_selection
 from ux_daily_brief.models import Article
+from ux_daily_brief.sponsorship_review import check_article_sponsorship
 
 
 REPORT = Path("data/reports/ux_scoring_incremental.json")
@@ -104,6 +105,7 @@ def main():
             max_per_source=2,
             editorial_results=editorial_results,
             min_articles=6,
+            sponsorship_check=check_article_sponsorship,
         )
 
     selected = [

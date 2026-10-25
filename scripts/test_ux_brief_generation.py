@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+from ux_daily_brief.source_enrichment import enrich_article
 from ux_daily_brief.brief_generation import (
     BriefGenerationError,
     generate_brief_entry,
@@ -32,7 +33,7 @@ def main():
     results = []
 
     for index, selected in enumerate(
-        selection["selected"][:1], start=1
+        selection["selected"], start=1
     ):
         source = source_rows[selected["article_id"]]
 
@@ -52,9 +53,16 @@ def main():
         )
 
         try:
+            enrichment = enrich_article(article)
+
+            print(
+                f"Enrichment: {enrichment.status}"
+            )
+
             entry = generate_brief_entry(
                 article,
                 editorial_classification=classification,
+                source_context=enrichment.context,
             )
 
             results.append({
