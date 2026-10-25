@@ -4,11 +4,7 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
-from ux_daily_brief.source_enrichment import enrich_article
-from ux_daily_brief.brief_generation import (
-    BriefGenerationError,
-    generate_brief_entry,
-)
+from ux_daily_brief.brief_pipeline import generate_brief
 from ux_daily_brief.models import Article
 
 
@@ -30,11 +26,9 @@ def main():
         for row in scoring["results"]
     }
 
-    results = []
+    candidates = []
 
-    for index, selected in enumerate(
-        selection["selected"], start=1
-    ):
+    for selected in selection["selected"]:
         source = source_rows[selected["article_id"]]
 
         article = Article(
@@ -52,72 +46,64 @@ def main():
             "editorial_classification", "weak"
         )
 
-        try:
-            enrichment = enrich_article(article)
+        candidates.append((article, classification))
 
-            print(
-                f"Enrichment: {enrichment.status}"
-            )
-
-            entry = generate_brief_entry(
-                article,
-                editorial_classification=classification,
-                source_context=enrichment.context,
-            )
-
-            results.append({
-                "status": "generated",
-                "article_id": article.article_id,
-                "entry": asdict(entry),
-            })
-
-            print(
-                f"[{index}] GENERATED | "
-                f"{article.source} | {article.title}"
-            )
-
-        except (BriefGenerationError, ValueError, KeyError) as exc:
-            results.append({
-                "status": "rejected",
-                "article_id": article.article_id,
-                "title": article.title,
-                "reason": str(exc),
-            })
-
-            print(
-                f"[{index}] REJECTED | "
-                f"{article.source} | {article.title}"
-            )
-            print("Reason:", str(exc))
-
-    generated = sum(
-        result["status"] == "generated"
-        for result in results
+    result = generate_brief(
+        candidates,
+        max_articles=9,
     )
+
+    output = {
+        "mode": "generation_test",
+        "candidates": len(candidates),
+        "attempted": result.attempted,
+        "generated": len(result.entries),
+        "rejected": len(result.rejected),
+        "target_reached": result.target_reached,
+        "status": result.status,
+        "entries": [
+            asdict(entry) for entry in result.entries
+        ],
+        "rejections": result.rejected,
+    }
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(
         json.dumps(
-            {
-                "mode": "generation_test",
-                "selected": len(results),
-                "generated": generated,
-                "rejected": len(results) - generated,
-                "results": results,
-            },
+            output,
             indent=2,
             ensure_ascii=False,
         ),
         encoding="utf-8",
     )
 
-    print("\n===== BRIEF GENERATION SUMMARY =====")
-    print("Selected:", len(results))
-    print("Generated:", generated)
-    print("Rejected:", len(results) - generated)
-    print("Output:", OUTPUT.resolve())
+    print("===== BRIEF PIPELINE DRY RUN =====")
+    print("Candidates:", len(candidates))
+    print("Attempted:", result.attempted)
+    print("Generated:", len(result.entries))
+    print("Rejected:", len(result.rejected))
+    print("Target reached:", result.target_reached)
+    print("Quality status:", result.status)
+
+    print("\n===== GENERATED ARTICLES =====")
+    for index, entry in enumerate(result.entries, 1):
+        print(
+            f"{index:02d}. {entry.source:12} | "
+            f"{entry.title}"
+        )
+
+    print("\n===== REJECTED ARTICLES =====")
+    for rejected in result.rejected:
+        print(
+            f"{rejected['source']:12} | "
+            f"{rejected['title']}"
+        )
+        print("Reason:", rejected["reason"])
+
+    print("\nREPORT:", OUTPUT.resolve())
     print("NO EMAILS SENT")
-    print("BRIEF GENERATION TEST: COMPLETE")
+    print("NO PUBLICATIONS RECORDED")
+    print("BRIEF PIPELINE DRY RUN: COMPLETE")
 
 
 if __name__ == "__main__":

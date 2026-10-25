@@ -106,6 +106,8 @@ def main():
             editorial_results=editorial_results,
             min_articles=6,
             sponsorship_check=check_article_sponsorship,
+            fallback_max_age_hours=168,
+            fallback_min_score=55.0,
         )
 
     selected = [
