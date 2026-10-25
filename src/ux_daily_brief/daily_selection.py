@@ -32,8 +32,17 @@ def build_daily_selection(
     fallback_max_age_hours: int | None = None,
     fallback_min_score: float = 55.0,
 ) -> DailySelectionResult:
+    eligible = [
+        article for article in articles
+        if article.review_status == "candidate"
+    ]
+    pending_review = [
+        article for article in articles
+        if article.review_status != "candidate"
+    ]
+
     preliminary = select_articles(
-        articles,
+        eligible,
         now=now,
         max_articles=len(articles) or 1,
         max_per_source=max(len(articles), 1),
@@ -42,6 +51,13 @@ def build_daily_selection(
 
     result = DailySelectionResult(
         excluded=list(preliminary.excluded),
+        review=[
+            {
+                "article_id": article.article_id,
+                "reason": "article_review_status_not_candidate",
+            }
+            for article in pending_review
+        ],
     )
 
     candidates = preliminary.selected

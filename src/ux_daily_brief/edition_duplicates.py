@@ -33,7 +33,13 @@ def check_edition_duplicate(
                 previous.article_id,
             )
 
-        if candidate_url and candidate_url == previous_url:
+        same_roundup = (
+            candidate.source == previous.source == "jakob_nielsen"
+            and "/p/ux-roundup-" in candidate_url
+            and candidate_url == previous_url
+        )
+
+        if candidate_url and candidate_url == previous_url and not same_roundup:
             return EditionDuplicateDecision(
                 "duplicate",
                 "Same normalized URL",

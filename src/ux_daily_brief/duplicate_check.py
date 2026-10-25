@@ -8,6 +8,7 @@ from ux_daily_brief.models import Article
 from ux_daily_brief.publication_history import (
     DEFAULT_DB_PATH,
     recently_published_stories,
+    recently_published_ids,
     was_recently_published,
 )
 from ux_daily_brief.semantic_dedup import (
@@ -32,13 +33,25 @@ def check_duplicate(
     if max_semantic_checks < 1:
         raise ValueError("max_semantic_checks must be positive")
 
-    if was_recently_published(
-        article.article_id,
-        article.url,
-        days=7,
-        db_path=db_path,
-        now=now,
-    ):
+    is_roundup = (
+        article.source == "jakob_nielsen"
+        and "/p/ux-roundup-" in article.url
+    )
+
+    if is_roundup:
+        already_published = article.article_id in recently_published_ids(
+            days=7, db_path=db_path, now=now
+        )
+    else:
+        already_published = was_recently_published(
+            article.article_id,
+            article.url,
+            days=7,
+            db_path=db_path,
+            now=now,
+        )
+
+    if already_published:
         return DuplicateDecision(
             "duplicate",
             "Already published within 7 days (ID or URL)",

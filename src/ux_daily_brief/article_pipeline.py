@@ -43,6 +43,32 @@ EXTRACTORS = {
 }
 
 
+
+# Conservative editorial review gate for newsletter-only topics.
+AMBIGUOUS_JAKOB_TITLES = frozenset({
+    "forecasting",
+    "notifications",
+})
+
+
+def needs_editorial_review(
+    source: str, title: str, excerpt: str
+) -> bool:
+    if source != "jakob_nielsen":
+        return False
+
+    title = title.strip()
+    excerpt = excerpt.strip()
+
+    if not title or not excerpt:
+        return True
+
+    if title.casefold() in AMBIGUOUS_JAKOB_TITLES:
+        return True
+
+    return False
+
+
 def extract_from_newsletter(message: dict) -> list[Article]:
     source = str(message.get("source") or "").strip()
 
@@ -76,6 +102,13 @@ def extract_from_newsletter(message: dict) -> list[Article]:
             excerpt=item["excerpt"],
             origin="newsletter",
             received_at=received_at,
+            review_status=(
+                "review"
+                if needs_editorial_review(
+                    item["source"], item["title"], item["excerpt"]
+                )
+                else "candidate"
+            ),
         )
         for item in candidates
     ]

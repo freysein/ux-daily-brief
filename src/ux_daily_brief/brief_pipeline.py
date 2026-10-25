@@ -53,6 +53,15 @@ def generate_brief(
         if len(result.entries) >= max_articles:
             break
 
+        if article.review_status != "candidate":
+            result.rejected.append({
+                "article_id": article.article_id,
+                "source": article.source,
+                "title": article.title,
+                "reason": "article_review_status_not_candidate",
+            })
+            continue
+
         if article.article_id in seen_ids:
             raise ValueError(
                 f"Duplicate candidate ID: {article.article_id}"
