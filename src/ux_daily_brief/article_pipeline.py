@@ -6,6 +6,8 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from ux_daily_brief.models import Article
+from ux_daily_brief.extractors.nngroup import extract_articles as extract_nngroup
+from ux_daily_brief.extractors.wired import extract_articles as extract_wired
 from ux_daily_brief.extractors.jakob_nielsen import (
     extract_articles as extract_jakob_nielsen,
 )
@@ -39,6 +41,8 @@ def parse_received_at(value: str | None) -> datetime | None:
 EXTRACTORS = {
     "techcrunch": extract_techcrunch,
     "page": extract_page,
+    "nngroup": extract_nngroup,
+    "wired": extract_wired,
     "jakob_nielsen": extract_jakob_nielsen,
 }
 
@@ -54,11 +58,41 @@ AMBIGUOUS_JAKOB_TITLES = frozenset({
 def needs_editorial_review(
     source: str, title: str, excerpt: str
 ) -> bool:
-    if source != "jakob_nielsen":
-        return False
-
     title = title.strip()
     excerpt = excerpt.strip()
+
+    if source == "wired":
+        # Conservative guard: flag clearly dangling headlines.
+        dangling = {
+            "a", "an", "and", "at", "by", "for", "from",
+            "in", "into", "of", "on", "or", "than",
+            "the", "to", "with", "own", "its",
+        }
+
+        words = title.casefold().split()
+        if not title or not excerpt:
+            return True
+        if len(title) >= 60 and words and words[-1] in dangling:
+            return True
+
+        # Confirmed incomplete headings from newsletter extraction.
+        incomplete_prefixes = (
+            "An AI Agent Joined a Listserv of Top Internet Researchers. "
+            "The Reply-All Chaos",
+            "A Design Flaw in Share Links Exposes Users’ Personal "
+            "Conversations With Meta’s",
+            "This startup is all in on recursive self-improvement. "
+            "Its latest",
+        )
+
+        if any(title.casefold() == value.casefold()
+               for value in incomplete_prefixes):
+            return True
+
+        return False
+
+    if source != "jakob_nielsen":
+        return False
 
     if not title or not excerpt:
         return True
@@ -89,6 +123,8 @@ def extract_from_newsletter(message: dict) -> list[Article]:
             str(message.get("body_text") or ""),
             str(message.get("subject") or ""),
         )
+    elif source in {"nngroup", "wired"}:
+        candidates = extractor(str(message.get("body_text") or ""))
     else:
         html = message.get("body_html") or ""
         candidates = extractor(html)
