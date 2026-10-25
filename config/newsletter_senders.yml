@@ -1,18 +1,20 @@
 version: 1
-
 senders:
   wired:
     addresses:
-      - wired@newsletters.wired.com
-
+    - wired@newsletters.wired.com
   techcrunch:
     addresses:
-      - newsletters@techcrunch.com
-
+    - newsletters@techcrunch.com
   nngroup:
     addresses:
-      - alertbox@nngroup.com
-
+    - alertbox@nngroup.com
   page:
     addresses:
-      - page@cloud.ebnermedia.de
+    - page@cloud.ebnermedia.de
+  smashing:
+    addresses:
+    - newsletter@smashingmagazine.com
+  jakob_nielsen:
+    addresses:
+    - jakobnielsenphd@substack.com

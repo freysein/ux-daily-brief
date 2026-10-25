@@ -1,5 +1,4 @@
 version: 1
-
 policy:
   language: en
   schedule: weekdays
@@ -10,154 +9,131 @@ policy:
   send_empty_edition: true
   require_full_video_transcript: true
   paywall_access: false
-
 sources:
-
-  # GROUP A - HIGH RISK
   gartner:
     name: Gartner
     group: A
     access: newsletter
     processing: newsletter_only
-
   forrester:
     name: Forrester
     group: A
     access: newsletter
     processing: newsletter_only
-
   ixdf:
     name: Interaction Design Foundation
     group: A
     access: newsletter
     processing: newsletter_only
-
   wired:
     name: WIRED
     group: A
     access: newsletter
     processing: newsletter_only
-
-  # GROUP B - RESTRICTED
   techcrunch:
     name: TechCrunch
     group: B
     access: newsletter
     processing: newsletter_only
-
   hubspot:
     name: HubSpot
     group: B
     access: newsletter
     processing: newsletter_only
-
   nngroup:
     name: Nielsen Norman Group
     group: B
     access: newsletter
     processing: newsletter_only
-
   uxcollective:
     name: UX Collective
     group: B
     access: newsletter
     processing: newsletter_only
-
-  # GROUP C - FULL ANALYSIS
   rolandberger:
     name: Roland Berger
     group: C
     access: newsletter
     processing: full_analysis
-
   uxtigers:
     name: UX Tigers
     group: C
     access: newsletter
     processing: full_analysis
-
   uxmatters:
     name: UXmatters
     group: C
     access: newsletter
     processing: full_analysis
-
   page:
     name: PAGE
     group: C
     access: rss
     feed_url: https://page-online.de/feed
     processing: full_analysis
-
   smashing:
     name: Smashing Magazine
     group: C
     access: rss
     feed_url: https://www.smashingmagazine.com/feed/
     processing: full_analysis
-
   gehirngerecht:
     name: Gehirngerecht Digital
     group: C
     access: newsletter
     processing: full_analysis
-
   iaap_dach:
     name: IAAP DACH
     group: C
     access: newsletter
     processing: full_analysis
-
   t3n_ai:
     name: t3n AI
     group: C
     access: rss
     feed_url: https://t3n.de/tag/kuenstliche-intelligenz/rss.xml
     processing: full_analysis
-
   t3n_meisterprompter:
     name: t3n MeisterPrompter
     group: C
     access: newsletter
     processing: full_analysis
-
   omr:
     name: OMR
     group: C
     access: newsletter
     processing: full_analysis
-
   gregor_schmalzried:
     name: Gregor Schmalzried
     group: C
     access: newsletter
     processing: full_analysis
-
-  # YOUTUBE - TRANSCRIPT REQUIRED
   fireship:
     name: Fireship
     group: youtube
     access: youtube_rss
     feed_url: https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA
     processing: transcript_required
-
   two_minute_papers:
     name: Two Minute Papers
     group: youtube
     access: youtube_rss
     feed_url: https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg
     processing: transcript_required
-
   the_futur:
     name: The Futur
     group: youtube
     access: youtube_rss
     feed_url: https://www.youtube.com/feeds/videos.xml?channel_id=UC-b3c7kxa5vU-bnmaROgvog
     processing: transcript_required
-
   next_new_thing_ai:
     name: The Next New Thing AI
     group: youtube
     access: pending
     channel_url: https://www.youtube.com/@TheNextNewThingAI
     processing: transcript_required
+  jakob_nielsen:
+    name: Jakob Nielsen
+    group: B
+    access: newsletter
+    processing: newsletter_only

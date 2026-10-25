@@ -6,6 +6,10 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from ux_daily_brief.models import Article
+from ux_daily_brief.extractors.jakob_nielsen import (
+    extract_articles as extract_jakob_nielsen,
+)
+from ux_daily_brief.source_identifier import identify_source
 from ux_daily_brief.extractors.techcrunch import (
     extract_articles as extract_techcrunch,
 )
@@ -35,19 +39,33 @@ def parse_received_at(value: str | None) -> datetime | None:
 EXTRACTORS = {
     "techcrunch": extract_techcrunch,
     "page": extract_page,
+    "jakob_nielsen": extract_jakob_nielsen,
 }
 
 
 def extract_from_newsletter(message: dict) -> list[Article]:
     source = str(message.get("source") or "").strip()
 
+    # Identify generic inbox messages by their confirmed sender.
+    if source in {"", "ux_inbox"}:
+        identification = identify_source(
+            str(message.get("from") or "")
+        )
+        source = identification["source"]
+
     # Unknown or unsupported sources are not analyzed.
     extractor = EXTRACTORS.get(source)
     if extractor is None:
         return []
 
-    html = message.get("body_html") or ""
-    candidates = extractor(html)
+    if source == "jakob_nielsen":
+        candidates = extractor(
+            str(message.get("body_text") or ""),
+            str(message.get("subject") or ""),
+        )
+    else:
+        html = message.get("body_html") or ""
+        candidates = extractor(html)
     received_at = parse_received_at(message.get("received_at"))
 
     return [
