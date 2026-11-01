@@ -8,7 +8,8 @@ from .newsletter_links import candidate
 
 # Mailchimp HTML links are redirects. The plaintext newsletter carries
 # original URLs in Markdown-style links.
-MARKDOWN_LINK = re.compile(r"\[([^\]\n]{5,220})\]\((https?://[^\s)]+)\)")
+MARKDOWN_LINK = re.compile(r"\\[([^\\]\\n]{5,220})\\]\\((https?://[^\\s)]+)\\)")
+PLAIN_LINK = re.compile(r"^\\s*(?:\\*+\\s*)?(.{12,220}?)\\s*\\((https?://[^\\s)]+)\\)", re.M)
 ALLOWED_NNG_PREFIXES = (
     "/articles/", "/videos/", "/podcasts/", "/contents/",
 )
@@ -21,8 +22,10 @@ def _clean(raw: str) -> str:
 
 def extract_articles(text: str) -> list[dict]:
     results: dict[str, dict] = {}
-    for match in MARKDOWN_LINK.finditer(text or ""):
-        title = re.sub(r"^\*+\s*", "", match.group(1).strip()).strip()
+    # Handle both "[Title](URL)" and the emails' "Title (URL)" text.
+    matches = list(PLAIN_LINK.finditer(text or "")) + list(MARKDOWN_LINK.finditer(text or ""))
+    for match in matches:
+        title = re.sub(r"^\\*+\\s*", "", match.group(1).strip()).strip()
         url = _clean(match.group(2))
         parsed = urlsplit(url)
         host = (parsed.hostname or "").lower()
