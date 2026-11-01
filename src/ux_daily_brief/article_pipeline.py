@@ -145,7 +145,7 @@ def extract_from_newsletter(message: dict) -> list[Article]:
             received_at=received_at,
             review_status=(
                 "review"
-                if needs_editorial_review(
+                if item.get("review_status") == "review" or needs_editorial_review(
                     item["source"], item["title"], item["excerpt"]
                 )
                 else "candidate"
