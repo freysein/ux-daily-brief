@@ -22,10 +22,12 @@ MAX_PAYLOAD_BYTES = 2_000_000
 
 def allowed_sources() -> set[str]:
     config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+    sources = config["sources"]
+
     return {
         key
-        for key, value in config["sources"].items()
-        if value.get("access") == "newsletter" or key == "page"
+        for key, value in sources.items()
+        if value.get("access") in {"newsletter", "rss"}
     } | {"ux_inbox"}
 
 
@@ -132,10 +134,25 @@ def ingest(payload: dict) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--payload-b64", required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--payload-b64")
+    inputs.add_argument("--payload-file", type=Path)
     args = parser.parse_args()
 
-    raw = base64.b64decode(args.payload_b64, validate=True)
+    if args.payload_file is not None:
+        staging = (ROOT / "data/inbox/staging").resolve()
+        path = args.payload_file.resolve(strict=True)
+
+        if path.parent != staging or path.suffix != ".json":
+            raise ValueError("Payload file must be in staging directory")
+
+        if not path.is_file() or path.stat().st_size > MAX_PAYLOAD_BYTES:
+            raise ValueError("Invalid payload file or size limit exceeded")
+
+        raw = path.read_bytes()
+    else:
+        raw = base64.b64decode(args.payload_b64, validate=True)
+
     if len(raw) > MAX_PAYLOAD_BYTES:
         raise ValueError("Input payload exceeds size limit")
 
