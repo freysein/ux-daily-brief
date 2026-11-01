@@ -58,6 +58,14 @@ def extract_articles(html: str) -> list[dict]:
         if not url.startswith(("https://", "http://")):
             continue
         title = _title_near_button(anchor)
+        # The hero course uses an inline quoted anchor rather than a heading.
+        # Prefer that explicit title to a nearby promotional tagline.
+        if "charakterideen" in title.casefold():
+            for previous in anchor.find_all_previous("a", href=True, limit=15):
+                label_text = clean_text(previous.get_text(" ", strip=True))
+                if "Imaginary Friends" in label_text and "Character Lab" in label_text:
+                    title = label_text.strip("»« \\u00a0")
+                    break
         if not title:
             # Better zero questionable candidates than date-as-title errors.
             continue
