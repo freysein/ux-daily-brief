@@ -1,16 +1,50 @@
 from __future__ import annotations
 
 import re
-from bs4 import BeautifulSoup
-
+from bs4 import BeautifulSoup, Tag
 from ux_daily_brief.text_cleaning import clean_text
 
 BUTTON = re.compile(r"(?:mehr erfahren|jetzt (?:noch )?anmelden)", re.I)
-SKIP = re.compile(r"\b(?:anzeige|sponsored|werbung)\b", re.I)
+SKIP = re.compile(r"^\s*(?:anzeige|sponsored|werbung)\b", re.I)
+DATE = re.compile(
+    r"^(?:\d{1,2}[.]?\s*(?:&\s*\d{1,2}[.]?)?\s*(?:"
+    r"januar|februar|märz|april|mai|juni|juli|august|september|"
+    r"oktober|november|dezember|\d{1,2}\.)\b|"
+    r"\d{1,2}[.]\s*\d{1,2}[.]\s*\d{4})", re.I
+)
+HEADING_TAGS = {"h1", "h2", "h3", "h4", "h5", "strong", "b"}
+
+
+def _title_near_button(anchor: Tag) -> str:
+    """Choose only an explicit heading; never turn a date into a title."""
+    # The PAGE Academy markup places titles before date/description/CTA.
+    # Search backwards, stopping at the previous CTA to avoid using
+    # a heading belonging to a different course.
+    inspected = 0
+    for previous in anchor.find_all_previous(True):
+        inspected += 1
+        if inspected > 180:
+            break
+        if previous.name == "a" and BUTTON.search(
+            clean_text(previous.get_text(" ", strip=True))
+        ):
+            break
+        if previous.name not in HEADING_TAGS:
+            continue
+        title = clean_text(previous.get_text(" ", strip=True))
+        if (
+            12 <= len(title) <= 130
+            and not BUTTON.search(title)
+            and not DATE.match(title)
+            and not SKIP.search(title)
+            and not title.startswith(("→", "»"))
+        ):
+            return title
+    return ""
 
 
 def extract_articles(html: str) -> list[dict]:
-    """PAGE Academy emails: collect course blocks, not site navigation."""
+    """Extract PAGE Academy course candidates for editorial review."""
     if not html:
         return []
     soup = BeautifulSoup(html, "html.parser")
@@ -23,43 +57,19 @@ def extract_articles(html: str) -> list[dict]:
         url = anchor["href"].strip()
         if not url.startswith(("https://", "http://")):
             continue
-        # The nearest table cell is generally the course card; fallback to
-        # surrounding div for layouts without tables.
+        title = _title_near_button(anchor)
+        if not title:
+            # Better zero questionable candidates than date-as-title errors.
+            continue
         block = anchor.find_parent("td") or anchor.find_parent("div")
         if block is None:
             continue
         text = clean_text(block.get_text(" ", strip=True))
         if len(text) < 65 or SKIP.search(text[:50]):
             continue
-        # Title is often in a preceding sibling/adjacent cell. Look up to
-        # two table levels without swallowing the entire newsletter.
-        parent = block
-        for _ in range(2):
-            if len(text) >= 140:
-                break
-            outer = parent.find_parent("td")
-            if outer is None:
-                break
-            candidate_text = clean_text(outer.get_text(" ", strip=True))
-            if len(candidate_text) > 1800:
-                break
-            text = candidate_text
-            parent = outer
-
-        text = BUTTON.sub("", text).strip(" →:–-")
-        if len(text) < 65:
+        if url in seen:
             continue
-        # Prefer a prominent header when the card contains one.
-        heading = block.find(["h1", "h2", "h3", "h4", "strong", "b"])
-        title = clean_text(heading.get_text(" ", strip=True)) if heading else ""
-        if len(title) < 12 or BUTTON.search(title):
-            title = text[:110].rsplit(" ", 1)[0]
-        if len(title) < 12:
-            continue
-        key = url
-        if key in seen:
-            continue
-        seen.add(key)
+        seen.add(url)
         results.append({
             "source": "page",
             "title": title,
