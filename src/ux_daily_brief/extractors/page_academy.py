@@ -21,6 +21,7 @@ def _title_near_button(anchor: Tag) -> str:
     # Search backwards, stopping at the previous CTA to avoid using
     # a heading belonging to a different course.
     inspected = 0
+    fallback = ""
     for previous in anchor.find_all_previous(True):
         inspected += 1
         if inspected > 180:
@@ -39,8 +40,11 @@ def _title_near_button(anchor: Tag) -> str:
             and not SKIP.search(title)
             and not title.startswith(("→", "»"))
         ):
-            return title
-    return ""
+            if previous.name in {"h1", "h2", "h3", "h4", "h5"}:
+                return title
+            if not fallback:
+                fallback = title
+    return fallback
 
 
 def extract_articles(html: str) -> list[dict]:
@@ -64,7 +68,7 @@ def extract_articles(html: str) -> list[dict]:
             for previous in anchor.find_all_previous("a", href=True, limit=15):
                 label_text = clean_text(previous.get_text(" ", strip=True))
                 if "Imaginary Friends" in label_text and "Character Lab" in label_text:
-                    title = label_text.strip("»« \\u00a0")
+                    title = label_text.strip("»« ").strip()
                     break
         if not title:
             # Better zero questionable candidates than date-as-title errors.
