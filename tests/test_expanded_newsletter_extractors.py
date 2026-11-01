@@ -40,3 +40,11 @@ def test_page_academy_course():
 def test_page_academy_ignores_nav():
     html = '<a href="https://example.com">Impressum</a>'
     assert extract_academy(html) == []
+
+
+def test_nng_markdown_form():
+    found = extract_nng(
+        "[AI in UX: Work Is Faster](https://www.nngroup.com/articles/ai-in-ux-survey-26/)"
+    )
+    assert len(found) == 1
+    assert found[0]["title"] == "AI in UX: Work Is Faster"
