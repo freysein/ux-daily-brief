@@ -25,7 +25,7 @@ def extract_articles(text: str) -> list[dict]:
         MARKDOWN_LINK.finditer(text or "")
     )
     for match in matches:
-        title = re.sub(r"^\*+\s*", "", match.group(1).strip()).strip()
+        title = re.sub(r"^\*+\s*", "", match.group(1).strip()).strip().strip("[]").strip()
         url = _clean(match.group(2))
         parsed = urlsplit(url)
         host = (parsed.hostname or "").lower()
