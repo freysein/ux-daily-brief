@@ -196,3 +196,46 @@ def test_edition_review_does_not_consume_source_slot(tmp_path):
         "UX Article 3",
     ]
     assert len(result.review) == 1
+
+
+def test_pilot_broad_allows_low_scored_weak_within_week(tmp_path):
+    from datetime import timedelta
+    article = make_article(100, score=12)
+    article.published_at = NOW - timedelta(days=5)
+
+    with patch(
+        "ux_daily_brief.daily_selection.check_duplicate",
+        return_value=mock_decision("unique"),
+    ):
+        result = build_daily_selection(
+            [article],
+            now=NOW,
+            db_path=tmp_path / "test.duckdb",
+            editorial_results={
+                article.article_id: {"classification": "weak"}
+            },
+            fallback_max_age_hours=168,
+            fallback_min_score=0,
+            pilot_broad=True,
+        )
+
+    assert len(result.selected) == 1
+
+
+def test_normal_mode_still_rejects_low_scored_weak(tmp_path):
+    article = make_article(101, score=12)
+
+    with patch(
+        "ux_daily_brief.daily_selection.check_duplicate",
+        return_value=mock_decision("unique"),
+    ):
+        result = build_daily_selection(
+            [article],
+            now=NOW,
+            db_path=tmp_path / "test.duckdb",
+            editorial_results={
+                article.article_id: {"classification": "weak"}
+            },
+        )
+
+    assert result.selected == []
