@@ -69,7 +69,9 @@ EDITORIAL PRINCIPLES
 - A specific practical UX application is NOT required for every
   adjacent article.
 - Do not automatically classify every AI or technology article
-  as relevant.\n- During the broad discovery pilot, favor adjacent when relevance\n  to digital experience, design or professional learning is plausible.
+  as relevant. 
+- During the broad discovery pilot, favor adjacent when relevance
+  to digital experience, design or professional learning is plausible.
 - Avoid inventing implications, facts or product capabilities.
 - A meaningful title can provide evidence, but do not infer
   detailed findings from a headline alone.
