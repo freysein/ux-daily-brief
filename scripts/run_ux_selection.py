@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import tempfile
 from collections import Counter
@@ -18,6 +19,9 @@ OUTPUT = Path("data/reports/ux_daily_selection_dry_run.json")
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pilot-broad", action="store_true")
+    args = parser.parse_args()
     snapshot = json.loads(REPORT.read_text(encoding="utf-8"))
     rows = snapshot["results"]
 
@@ -106,13 +110,14 @@ def main():
             articles,
             now=now,
             db_path=db_path,
-            max_articles=9,
-            max_per_source=2,
+            max_articles=15 if args.pilot_broad else 9,
+            max_per_source=4 if args.pilot_broad else 2,
             editorial_results=editorial_results,
             min_articles=6,
             sponsorship_check=check_article_sponsorship,
             fallback_max_age_hours=168,
-            fallback_min_score=55.0,
+            fallback_min_score=0.0 if args.pilot_broad else 55.0,
+            pilot_broad=args.pilot_broad,
         )
 
     selected = [
@@ -143,7 +148,7 @@ def main():
         "history_mode": "isolated_empty_database",
         "scoring_report": str(REPORT),
         "editorial_report": str(EDITORIAL),
-        "selection_policy": "core_ux_adjacent_then_weak_fallback",
+        "selection_policy": "pilot_broad" if args.pilot_broad else "core_ux_adjacent_then_weak_fallback",
         "total_candidates": len(articles),
         "selected": selected,
         "review": result.review,
