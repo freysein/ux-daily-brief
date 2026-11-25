@@ -31,6 +31,7 @@ def build_daily_selection(
     sponsorship_check: Callable[[Article], str] | None = None,
     fallback_max_age_hours: int | None = None,
     fallback_min_score: float = 55.0,
+    pilot_broad: bool = False,
 ) -> DailySelectionResult:
     eligible = [
         article for article in articles
@@ -47,6 +48,7 @@ def build_daily_selection(
         max_articles=len(articles) or 1,
         max_per_source=max(len(articles), 1),
         max_age_hours=fallback_max_age_hours or 72,
+        min_score=0 if pilot_broad else 30,
     )
 
     result = DailySelectionResult(
@@ -153,6 +155,7 @@ def build_daily_selection(
             if (
                 classification == "weak"
                 and len(result.selected) >= min_articles
+                and not pilot_broad
             ):
                 result.excluded.append({
                     "article_id": article.article_id,

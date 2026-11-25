@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -21,6 +22,9 @@ def parse_date(value):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pilot-broad", action="store_true")
+    args = parser.parse_args()
     report = json.loads(INPUT.read_text(encoding="utf-8"))
 
     newsletter_dates = {}
@@ -40,7 +44,7 @@ def main():
             continue
 
         score = row.get("score")
-        if score is None or score < 30:
+        if score is None or (not args.pilot_broad and score < 30):
             continue
 
         article = Article(
@@ -60,7 +64,7 @@ def main():
 
         article.score = score
 
-        if is_fresh(article, now=now):
+        if is_fresh(article, now=now, max_age_hours=168 if args.pilot_broad else 72):
             candidates.append(article)
 
     candidates.sort(key=lambda a: (-a.score, a.source, a.title))
@@ -71,7 +75,7 @@ def main():
         try:
             review = review_article(article)
             status = review["classification"]
-            eligible = editorial_eligible(review)
+            eligible = editorial_eligible(review) or (args.pilot_broad and status == 'weak')
         except Exception as exc:
             review = {
                 "classification": "review",
@@ -103,7 +107,7 @@ def main():
 
     output = {
         "generated_at": now.isoformat(),
-        "mode": "editorial_dry_run",
+        "mode": "pilot_broad" if args.pilot_broad else "editorial_dry_run",
         "candidate_count": len(candidates),
         "results": results,
     }

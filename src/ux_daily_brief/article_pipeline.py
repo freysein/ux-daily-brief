@@ -20,6 +20,9 @@ from ux_daily_brief.extractors.page import (
 )
 
 
+from ux_daily_brief.extractors.page_academy import extract_articles as extract_page_academy
+
+
 def parse_received_at(value: str | None) -> datetime | None:
     if not value:
         return None
@@ -118,7 +121,9 @@ def extract_from_newsletter(message: dict) -> list[Article]:
     if extractor is None:
         return []
 
-    if source == "jakob_nielsen":
+    if source == "page" and ("academy" in str(message.get("body_text") or "").lower()[:600] or "academy" in str(message.get("subject") or "").lower()):
+        candidates = extract_page_academy(str(message.get("body_html") or ""))
+    elif source == "jakob_nielsen":
         candidates = extractor(
             str(message.get("body_text") or ""),
             str(message.get("subject") or ""),
@@ -140,7 +145,7 @@ def extract_from_newsletter(message: dict) -> list[Article]:
             received_at=received_at,
             review_status=(
                 "review"
-                if needs_editorial_review(
+                if item.get("review_status") == "review" or needs_editorial_review(
                     item["source"], item["title"], item["excerpt"]
                 )
                 else "candidate"
